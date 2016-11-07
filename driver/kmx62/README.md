@@ -133,9 +133,12 @@ obj-$(CONFIG_SENSORS_KMX62)		+= kmx62.o
 ## driver sysfs attributes ##
 
 Accel input dev sysfs interface - /sys/class/input/input7
+
 Mag input dev sysfs interface- /sys/class/input/input8
 
+
 Qualcomm sensors sysfs interface - /sys/class/sensors/kmx62-accel
+
 Qualcomm sensors sysfs interface - /sys/class/sensors/kmx62-mag
 
 ## Input device events ##
