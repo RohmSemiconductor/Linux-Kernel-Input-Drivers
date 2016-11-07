@@ -1,0 +1,67 @@
+
+Example kmx62 device tree configuration for Dragon board 410c. 
+
+- kmx62 connected to Dragon board 410c i2c bus 0 (J8 pin 15 and 17)
+- kmx62 slave address is 0x0f
+- kmx62 int2 connected to Dragon board 410c gpio 69  (J8 pin 26)
+
+
+## kmx62 example i2c client dts defines
+file: /kernel/arch/arm/boot/dts/qcom/apq8016-sbc.dtsi
+
+
+&soc {
+	i2c@78b6000 { /* BLSP1 QUP2 */
+
+<<----cut-kmx62--->>
+
+		kmx62@f { /* Kionix accelerometer/magnetometer combo */
+			compatible = "kionix,kmx62";
+			reg = <0x0f>;
+			pinctrl-names = "kmx62_int2_default", "kmx62_int2_sleep";
+			pinctrl-0 = <&kmx62_int2_default>;
+			pinctrl-1 = <&kmx62_int2_sleep>;
+			interrupt-parent = <&msm_gpio>;
+			interrupts = <69 0x1>;
+			kionix,gpio-int2 = <&msm_gpio 69 0x1>;
+			kionix,x-map = <0>;
+			kionix,y-map = <1>;
+			kionix,z-map = <2>;
+			kionix,x-negate = <0>;
+			kionix,y-negate = <0>;
+			kionix,z-negate = <0>;
+			kionix,g-range = <8>;
+			kionix,use-drdy-int;
+		};
+
+<<----cut-kmx62--->>
+
+## kmx62 pin control on db410c
+file: /kernel/arch/arm/boot/dts/qcom/msm8916-pinctrl.dtsi
+
+&soc {
+	tlmm_pinmux: pinctrl@1000000 {
+		compatible = "qcom,msm-tlmm-8916";
+		reg = <0x1000000 0x300000>;
+		interrupts = <0 208 0>;
+
+<<----cut-kmx62--->>
+
+		kmx62_int2_pin {
+			qcom,pins = <&gp 69>;
+			qcom,pin-func = <0>;
+			qcom,num-grp-pins = <1>;
+			label = "kmx62-irq2";
+			kmx62_int2_default: kmx62_int2_default {
+				drive-strength = <2>;
+				bias-disable = <0>;	/* No PULL */
+			};
+			kmx62_int2_sleep: kmx62_int2_sleep {
+				drive-strength = <2>;
+				bias-disable = <0>;	/* No PULL */
+			};
+		};
+
+<<----cut-kmx62--->>
+
+
