@@ -156,3 +156,7 @@ ABS_X
 ABS_Y
 ABS_Z
 ```
+
+# Android CTS tests #
+
+KMX62 passes Android 5.1 R13 cts-tradefed tests.

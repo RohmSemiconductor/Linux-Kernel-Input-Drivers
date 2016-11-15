@@ -40,6 +40,8 @@
 #include "kmx62.h"
 #include "kmx62_regs.h"
 
+//#define DEBUG_XYZ_DATA
+
 #define __debug printk
 //#define __debug pr_debug
 
@@ -185,6 +187,11 @@ static int kmx62_mag_poll_thread(void *data);
 static int kmx62_accel_set_delay(struct kmx62_data *sdata, unsigned long delay);
 static int kmx62_mag_set_delay(struct kmx62_data *sdata, unsigned long delay);
 
+static void kmx62_accel_report_xyz(struct input_dev *dev, int *xyz, ktime_t ts);
+static int kmx62_accel_read_xyz(struct kmx62_data *sdata, int *xyz);
+static void kmx62_mag_report_xyz(struct input_dev *dev, int *xyz, ktime_t ts);
+static int kmx62_mag_read_xyz(struct kmx62_data *sdata, int *xyz);
+
 /* common part */
 /* Returns 0 on success, negative on error */
 static int kmx62_change_reg_bits(struct kmx62_data *sdata, u8 reg, u8 bits, u8 mask)
@@ -317,6 +324,37 @@ static int kmx62_hw_detect(struct kmx62_data *sdata)
 	return 0;
 }
 
+static void kmx62_irq_report_data(struct kmx62_data *sdata, int status)
+{
+	int xyz[3];
+	ktime_t ts;
+	int err;
+
+	ts = ktime_get_boottime();
+
+	if (status & KMX62_INS1_DRDY_A_1) {
+		err = kmx62_accel_read_xyz(sdata, xyz);
+
+		if (err) {
+			dev_err(&sdata->client->dev, "acc i2c read error\n");
+		} else {
+			kmx62_accel_report_xyz(sdata->accel_input_dev, xyz, ts);
+		}
+	}
+
+	if (status & KMX62_INS1_DRDY_M_1) {
+		err = kmx62_mag_read_xyz(sdata, xyz);
+
+		if (err) {
+			dev_err(&sdata->client->dev, "mag i2c read error\n");
+		} else {
+			kmx62_mag_report_xyz(sdata->mag_input_dev, xyz, ts);
+		}
+	}
+
+	return;
+}
+
 static irqreturn_t kmx62_irq_handler(int irq, void *dev)
 {
 	struct kmx62_data *sdata = dev;
@@ -334,16 +372,10 @@ static irqreturn_t kmx62_irq_handler(int irq, void *dev)
 		return IRQ_HANDLED;
 	}
 
-	//__debug("%s: INS1 status=0x%x\n", __FUNCTION__, status);
-	if (status & KMX62_INS1_DRDY_A_1) {
-		sdata->accel_wkp_flag = 1;
-		wake_up_interruptible(&sdata->accel_wq);
-	}
 
-	if (status & KMX62_INS1_DRDY_M_1) {
-		sdata->mag_wkp_flag = 1;
-		wake_up_interruptible(&sdata->mag_wq);
-	}
+	//__debug("%s: INS1 status=0x%x\n", __FUNCTION__, status);
+
+	kmx62_irq_report_data(sdata, status);
 
 	return IRQ_HANDLED;
 }
@@ -524,11 +556,17 @@ static int kmx62_accel_set_delay(struct kmx62_data *sdata, unsigned long delay)
 	return err;
 }
 
-static void kmx62_accel_report_xyz(struct input_dev *dev, int *xyz)
+static void kmx62_accel_report_xyz(struct input_dev *dev, int *xyz, ktime_t ts)
 {
+#ifdef DEBUG_XYZ_DATA
+	__debug("acc - x,y,z,ts:, %d, %d, %d, %lld \n", xyz[0], xyz[1], xyz[2],
+		ktime_to_ms(ts) );
+#endif
 	input_report_abs(dev, ABS_X, xyz[0]);
 	input_report_abs(dev, ABS_Y, xyz[1]);
 	input_report_abs(dev, ABS_Z, xyz[2]);
+	input_event(dev, EV_SYN, SYN_TIME_SEC, ktime_to_timespec(ts).tv_sec);
+	input_event(dev, EV_SYN, SYN_TIME_NSEC, ktime_to_timespec(ts).tv_nsec);
 	input_sync(dev);
 }
 
@@ -563,6 +601,7 @@ static int kmx62_accel_poll_thread(void *data)
 	struct kmx62_data *sdata = data;
 	int err;
 	int xyz[3];
+	ktime_t ts;
 
 	while (1) {
 		wait_event_interruptible(sdata->accel_wq,
@@ -584,11 +623,12 @@ static int kmx62_accel_poll_thread(void *data)
 
 		}
 
+		ts = ktime_get_boottime();
 		err = kmx62_accel_read_xyz(sdata, xyz);
 		if (err) {
 			dev_err(&sdata->client->dev, "i2c read/write error\n");
 		} else {
-			kmx62_accel_report_xyz(sdata->accel_input_dev, xyz);
+			kmx62_accel_report_xyz(sdata->accel_input_dev, xyz, ts);
 		}
 	}
 
@@ -885,11 +925,18 @@ static int kmx62_mag_set_delay(struct kmx62_data *sdata, unsigned long delay)
 	return err;
 }
 
-static void kmx62_mag_report_xyz(struct input_dev *dev, int *xyz)
+static void kmx62_mag_report_xyz(struct input_dev *dev, int *xyz, ktime_t ts)
 {
+#ifdef DEBUG_XYZ_DATA
+	__debug("mag - x,y,z,ts:, %d, %d, %d, %lld \n", xyz[0], xyz[1], xyz[2],
+		ktime_to_ms(ts) );
+#endif
+
 	input_report_abs(dev, ABS_X, xyz[0]);
 	input_report_abs(dev, ABS_Y, xyz[1]);
 	input_report_abs(dev, ABS_Z, xyz[2]);
+	input_event(dev, EV_SYN, SYN_TIME_SEC, ktime_to_timespec(ts).tv_sec);
+	input_event(dev, EV_SYN, SYN_TIME_NSEC, ktime_to_timespec(ts).tv_nsec);
 	input_sync(dev);
 }
 
@@ -924,6 +971,7 @@ static int kmx62_mag_poll_thread(void *data)
 	struct kmx62_data *sdata = data;
 	int err;
 	int xyz[3];
+	ktime_t ts;
 
 	while (1) {
 		wait_event_interruptible(sdata->mag_wq,
@@ -945,11 +993,13 @@ static int kmx62_mag_poll_thread(void *data)
 
 		}
 
+		ts = ktime_get_boottime();
 		err = kmx62_mag_read_xyz(sdata, xyz);
+
 		if (err) {
 			dev_err(&sdata->client->dev, "mag i2c read/write error\n");
 		} else {
-			kmx62_mag_report_xyz(sdata->mag_input_dev, xyz);
+			kmx62_mag_report_xyz(sdata->mag_input_dev, xyz, ts);
 		}
 	}
 
