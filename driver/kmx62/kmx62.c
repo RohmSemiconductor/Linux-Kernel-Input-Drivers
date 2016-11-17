@@ -38,7 +38,7 @@
 #include <linux/sensors.h>
 #endif
 #include "kmx62.h"
-#include "kmx62_regs.h"
+#include "kmx62_registers.h"
 
 //#define DEBUG_XYZ_DATA
 
@@ -232,7 +232,7 @@ static int kmx62_set_odr(struct kmx62_data *sdata, u8 odr, u8 odr_mask)
 	if (cntl2_reg < 0)
 		return cntl2_reg;	//Error code
 
-	cntl2_reg_sensors_disabled = (cntl2_reg & ~(KMX62_CNTL2_MAG_EN | KMX62_CNTL2_ACCEL_EN));
+	cntl2_reg_sensors_disabled = (cntl2_reg & ~(KMX62_CNTL2_MAG_EN_OPERATING_MODE | KMX62_CNTL2_ACCEL_EN_OPERATING_MODE));
 	if (cntl2_reg != cntl2_reg_sensors_disabled) {
 		err = i2c_smbus_write_byte_data(sdata->client,
 						KMX62_CNTL2,
@@ -248,7 +248,7 @@ static int kmx62_set_odr(struct kmx62_data *sdata, u8 odr, u8 odr_mask)
 		return err;
 
 	/* 3. enable sensor if it was enabled */
-	if (cntl2_reg & (KMX62_CNTL2_MAG_EN | KMX62_CNTL2_ACCEL_EN)) {
+	if (cntl2_reg & (KMX62_CNTL2_MAG_EN_OPERATING_MODE | KMX62_CNTL2_ACCEL_EN_OPERATING_MODE)) {
 		err = i2c_smbus_write_byte_data(sdata->client,
 						KMX62_CNTL2,
 						cntl2_reg
@@ -287,7 +287,7 @@ static bool kmx62_set_sensor_init_values(struct kmx62_data *sdata)
 	err = false || kmx62_accel_set_delay(sdata, sdata->accel_poll_rate);
 	err = err   || kmx62_mag_set_delay(sdata, sdata->mag_poll_rate);
 	err = err   || kmx62_accel_set_grange(sdata, sdata->g_range);
-	err = err   || kmx62_accel_set_res(sdata, KMX62_CNTL2_RES_MAX);
+	err = err   || kmx62_accel_set_res(sdata, KMX62_CNTL2_RES_MAX2);
 
 	return err;
 }
@@ -296,7 +296,7 @@ static bool kmx62_set_sensor_init_values(struct kmx62_data *sdata)
 static int kmx62_soft_reset(struct kmx62_data *sdata)
 {
 	return i2c_smbus_write_byte_data(sdata->client, KMX62_CNTL1,
-		KMX62_CNTL1_SRST_1);
+		KMX62_CNTL1_SRST);
 }
 
 /* Returns 0 on success, negative on error */
@@ -332,7 +332,7 @@ static void kmx62_irq_report_data(struct kmx62_data *sdata, int status)
 
 	ts = ktime_get_boottime();
 
-	if (status & KMX62_INS1_DRDY_A_1) {
+	if (status & KMX62_INS1_DRDY_A_AVAILABLE) {
 		err = kmx62_accel_read_xyz(sdata, xyz);
 
 		if (err) {
@@ -342,7 +342,7 @@ static void kmx62_irq_report_data(struct kmx62_data *sdata, int status)
 		}
 	}
 
-	if (status & KMX62_INS1_DRDY_M_1) {
+	if (status & KMX62_INS1_DRDY_M_AVAILABLE) {
 		err = kmx62_mag_read_xyz(sdata, xyz);
 
 		if (err) {
@@ -473,7 +473,7 @@ static int kmx62_accel_enable(struct kmx62_data *sdata)
 		return 0;
 
 	/* enable accel */
-	err = kmx62_set_reg_bit(sdata, KMX62_CNTL2, KMX62_CNTL2_ACCEL_EN);
+	err = kmx62_set_reg_bit(sdata, KMX62_CNTL2, KMX62_CNTL2_ACCEL_EN_OPERATING_MODE);
 	if (err < 0)
 		return err;
 
@@ -504,7 +504,7 @@ static int kmx62_accel_disable(struct kmx62_data *sdata)
 		return 0;
 
 	/* disable accel */
-	err = kmx62_clear_reg_bit(sdata, KMX62_CNTL2, KMX62_CNTL2_ACCEL_EN);
+	err = kmx62_clear_reg_bit(sdata, KMX62_CNTL2, KMX62_CNTL2_ACCEL_EN_OPERATING_MODE);
 	if (err < 0)
 		return err;
 
@@ -843,7 +843,7 @@ static int kmx62_mag_enable(struct kmx62_data *sdata)
 		return 0;
 
 	/* enable mag */
-	err = kmx62_set_reg_bit(sdata, KMX62_CNTL2, KMX62_CNTL2_MAG_EN);
+	err = kmx62_set_reg_bit(sdata, KMX62_CNTL2, KMX62_CNTL2_MAG_EN_OPERATING_MODE);
 	if (err < 0)
 		return err;
 
@@ -873,7 +873,7 @@ static int kmx62_mag_disable(struct kmx62_data *sdata)
 		return 0;
 
 	/* disable mag */
-	err = kmx62_clear_reg_bit(sdata, KMX62_CNTL2, KMX62_CNTL2_MAG_EN);
+	err = kmx62_clear_reg_bit(sdata, KMX62_CNTL2, KMX62_CNTL2_MAG_EN_OPERATING_MODE);
 	if (err < 0)
 		return err;
 
@@ -1553,7 +1553,7 @@ static int kmx62_probe(struct i2c_client *client,
 		disable_irq(sdata->irq1);
 
 		/* set irq1 active high, latched, push/pull */
-		inc3_val |= KMX62_INC3_IEA1_1 | KMX62_INC3_IEL1_LATCHED | KMX62_INC3_IED1_0;
+		inc3_val |= KMX62_INC3_IEA1_HIGH | KMX62_INC3_IEL1_LATCHED | KMX62_INC3_IED1_PUSHPULL;
 		err = i2c_smbus_write_byte_data(sdata->client,
 						KMX62_INC3,
 						inc3_val);
@@ -1577,7 +1577,7 @@ static int kmx62_probe(struct i2c_client *client,
 		disable_irq(sdata->irq2);
 
 		/* set irq2 active high, latched, push/pull */
-		inc3_val |= KMX62_INC3_IEA2_1 | KMX62_INC3_IEL2_LATCHED | KMX62_INC3_IED2_0;
+		inc3_val |= KMX62_INC3_IEA2_HIGH | KMX62_INC3_IEL2_LATCHED | KMX62_INC3_IED2_PUSHPULL;
 		err = i2c_smbus_write_byte_data(sdata->client,
 						KMX62_INC3,
 						inc3_val);
