@@ -1,1 +1,1 @@
-Repository for Linux kernel input driver development.
+Rohm and Kionix Linux kernel input drivers.
