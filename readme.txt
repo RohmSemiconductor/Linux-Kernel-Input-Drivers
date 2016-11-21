@@ -1,1 +1,0 @@
-Rohm and Kionix Linux kernel input drivers.
