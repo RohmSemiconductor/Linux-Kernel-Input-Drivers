@@ -1,0 +1,1 @@
+DRIVERS=="bh1792", SUBSYSTEM=="input", SYMLINK="input/bh1792", MODE="0666"
