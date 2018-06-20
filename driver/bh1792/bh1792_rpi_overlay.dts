@@ -1,0 +1,43 @@
+// Definitions for Rpi-Proto
+/dts-v1/;
+/plugin/;
+
+/ {
+	compatible = "brcm,bcm2708";
+
+	fragment@0 {
+		target = <&gpio>;
+		__overlay__ {
+			bh1792_pins: bh1792_pins {
+				brcm,pins = <13>; /* GPIO number */
+				brcm,function = <0>; /* direction in */
+				brcm,pull = <2>; /* enable pull-up*/
+			};
+		};
+	};
+
+	fragment@1 {
+		target = <&i2c1>;
+		__overlay__ {
+			status = "okay";
+			clock-frequency = <400000>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			bh1792: bh1792@5b {
+				compatible = "rohm,bh1792";
+				reg = <0x5b>;
+				pinctrl-names = "default";
+				pinctrl-0 = <&bh1792_pins>;
+				interrupt-parent = <&gpio>;
+				interrupts = <13 0x2>;
+				/*rohm,irq-gpio = <4 0>;*/
+				/* optional parameters */
+				rohm,operation-mode = <0>;
+				rohm,led1-current = <1>;
+				rohm,led2-current = <1>;
+				rohm,ir-threshold = <0>;
+				rohm,frequency = <1024>;
+        		};
+		};
+	};
+};
