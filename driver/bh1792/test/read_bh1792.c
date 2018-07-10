@@ -1,4 +1,8 @@
-/* Simple example application on reading bh1792 output
+/*
+ * Copyright(C) 2018 Rohm Semiconductor
+ * SPDX-License-Identifier: MIT
+ *
+ * Example application on reading bh1792 output
  *
  * Modes are numbered:
  * 0 - syncronized measurement mode
