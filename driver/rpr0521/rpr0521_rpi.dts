@@ -1,0 +1,40 @@
+// Definitions for Rpi-Proto
+/dts-v1/;
+/plugin/;
+
+/ {
+	compatible = "brcm,bcm2835", "brcm,bcm2708", "brcm,bcm2709";
+
+	fragment@0 {
+		target = <&gpio>;
+		__overlay__ {
+			rpr0521_pins: rpr0521_pins {
+				brcm,pins = <13>;
+				brcm,function = <0>;
+				brcm,pull = <2>;
+			};
+		};
+	};
+
+	fragment@1 {
+		target = <&i2c1>;
+		__overlay__ {
+			status = "okay";
+			clock-frequency = <400000>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			rpr0521: rpr0521@38 {
+				compatible = "rohm,rpr0521";
+				reg = <0x38>;
+				pinctrl-name = "default";
+				pinctrl-0 = <&rpr0521_pins>;
+				interrupt-parent = <&gpio>;
+				interrupts = <13 0x2>;
+				rohm,use-drdy-int;
+				rohm,als-delay = <100>;
+				rohm,proximity-delay = <100>;
+				rohm,proximity-offset = <0>;
+			};
+		};
+	};
+};

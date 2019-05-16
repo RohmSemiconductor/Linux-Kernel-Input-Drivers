@@ -1,0 +1,2 @@
+ACTION=="add", SUBSYSTEMS=="input", ATTRS{name}=="rpr0521-proximity", NAME="rpr0521_proximity", SYMLINK="input/rpr0521_proximity", MODE="0666"
+ACTION=="add", SUBSYSTEMS=="input", ATTRS{name}=="rpr0521-als", NAME="rpr0521_als", SYMLINK="input/rpr0521_als", MODE="0666"
