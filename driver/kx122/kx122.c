@@ -1,7 +1,7 @@
 /*
  * kx122: tri-axis accelerometer
  *
- * Copyright(C) 2016 Kionix, Inc.
+ * Copyright (c) 2020 Rohm Semiconductor
  *
  *
  * This program is free software; you can redistribute it and/or modify
